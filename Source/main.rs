@@ -12,8 +12,7 @@ use quick_xml::de::from_str;
 use serde::{Deserialize, Serialize};
 
 const MANIFEST_URL:&str = "https://msedgedriver.azureedge.net";
-const USER_AGENT:&str =
-	concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"));
+const USER_AGENT:&str = concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"));
 const DIST:&str = "dist";
 
 #[derive(Debug, Serialize, Hash, PartialEq, Eq)]
@@ -112,34 +111,24 @@ fn run(cwd:Result<PathBuf, IoError>) -> Result<()> {
 	// simple sanity check to make sure there *was* any results
 	assert!(results.blobs.blobs.len() > 1);
 
-	let output = results.blobs.blobs.into_iter().fold(
-		Output::default(),
-		|mut acc, blob| {
-			let (version, platform) =
-				parse_version_and_platform(&blob.name).unwrap();
-			let version = acc.0.entry(version).or_default();
-			version.insert(platform, Properties::from(blob));
+	let output = results.blobs.blobs.into_iter().fold(Output::default(), |mut acc, blob| {
+		let (version, platform) = parse_version_and_platform(&blob.name).unwrap();
+		let version = acc.0.entry(version).or_default();
+		version.insert(platform, Properties::from(blob));
 
-			acc
-		},
-	);
+		acc
+	});
 
 	for (version, properties) in output.0 {
 		let content = serde_json::to_string_pretty(&properties)?;
-		write(
-			versions.join(format!("{}.json", version.0)),
-			content.as_bytes(),
-		)?;
+		write(versions.join(format!("{}.json", version.0)), content.as_bytes())?;
 	}
 
 	Ok(())
 }
 
 fn fetch_manifest_from_network() -> Result<String> {
-	Ok(ureq::get(MANIFEST_URL)
-		.set("User-Agent", USER_AGENT)
-		.call()?
-		.into_string()?)
+	Ok(ureq::get(MANIFEST_URL).set("User-Agent", USER_AGENT).call()?.into_string()?)
 }
 
 fn clean_dist_directory(dist:&Path, versions:&Path) -> Result<()> {
@@ -161,12 +150,8 @@ fn parse_version_and_platform(s:&str) -> Option<(Version, Platform)> {
 		return None;
 	}
 
-	let platform = Platform(
-		platform_raw
-			.strip_prefix("edgedriver_")?
-			.strip_suffix(".zip")?
-			.to_string(),
-	);
+	let platform =
+		Platform(platform_raw.strip_prefix("edgedriver_")?.strip_suffix(".zip")?.to_string());
 
 	Some((version, platform))
 }
@@ -174,8 +159,7 @@ fn parse_version_and_platform(s:&str) -> Option<(Version, Platform)> {
 #[test]
 fn version_and_platform() {
 	let (version, platform) =
-		parse_version_and_platform("100.0.1154.0/edgedriver_arm64.zip")
-			.unwrap();
+		parse_version_and_platform("100.0.1154.0/edgedriver_arm64.zip").unwrap();
 
 	assert_eq!(version.0, "100.0.1154.0");
 	assert_eq!(platform.0, "arm64");
