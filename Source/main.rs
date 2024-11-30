@@ -94,16 +94,20 @@ impl From<Blob> for Properties {
 fn main() {
 	if let Err(e) = run(env::current_dir()) {
 		eprintln!("fatal error: {}", e);
+
 		exit(1);
 	}
 }
 
 fn run(cwd:Result<PathBuf, IoError>) -> Result<()> {
 	let dist = cwd?.join(DIST);
+
 	let versions = dist.join("versions");
+
 	clean_dist_directory(&dist, &versions)?;
 
 	let manifest = fetch_manifest_from_network()?;
+
 	write(dist.join("manifest.xml"), manifest.as_bytes())?;
 
 	let results:EnumerationResults = from_str(&manifest)?;
@@ -113,7 +117,9 @@ fn run(cwd:Result<PathBuf, IoError>) -> Result<()> {
 
 	let output = results.blobs.blobs.into_iter().fold(Output::default(), |mut acc, blob| {
 		let (version, platform) = parse_version_and_platform(&blob.name).unwrap();
+
 		let version = acc.0.entry(version).or_default();
+
 		version.insert(platform, Properties::from(blob));
 
 		acc
@@ -121,6 +127,7 @@ fn run(cwd:Result<PathBuf, IoError>) -> Result<()> {
 
 	for (version, properties) in output.0 {
 		let content = serde_json::to_string_pretty(&properties)?;
+
 		write(versions.join(format!("{}.json", version.0)), content.as_bytes())?;
 	}
 
@@ -135,18 +142,24 @@ fn clean_dist_directory(dist:&Path, versions:&Path) -> Result<()> {
 	if dist.exists() {
 		remove_dir_all(dist)?;
 	}
+
 	create_dir(dist)?;
+
 	create_dir(versions)?;
+
 	Ok(())
 }
 
 fn parse_version_and_platform(s:&str) -> Option<(Version, Platform)> {
 	let mut sides = s.split('/');
+
 	let version = Version(sides.next()?.to_string());
+
 	let platform_raw = sides.next()?;
 
 	if sides.next().is_some() {
 		eprintln!("unknown version/platform format: {}", s);
+
 		return None;
 	}
 
@@ -162,5 +175,6 @@ fn version_and_platform() {
 		parse_version_and_platform("100.0.1154.0/edgedriver_arm64.zip").unwrap();
 
 	assert_eq!(version.0, "100.0.1154.0");
+
 	assert_eq!(platform.0, "arm64");
 }
